@@ -6,11 +6,13 @@ from os.path import abspath, dirname
 from pathlib import Path
 from typing import Reversible, Union
 
+
 def handle_negation(file_path, rules: Reversible["IgnoreRule"]):
     for rule in reversed(rules):
         if rule.match(file_path):
             return not rule.negation
     return False
+
 
 def parse_gitignore(full_path, base_dir=None):
     if base_dir is None:
@@ -31,6 +33,7 @@ def parse_gitignore(full_path, base_dir=None):
         # We have negation rules. We can't use a simple "any" to evaluate them.
         # Later rules override earlier rules.
         return lambda file_path: handle_negation(file_path, rules)
+
 
 def rule_from_pattern(pattern, base_path=None, source=None):
     """
@@ -80,11 +83,11 @@ def rule_from_pattern(pattern, base_path=None, source=None):
     if pattern[0] == '\\' and pattern[1] in ('#', '!'):
         pattern = pattern[1:]
     # trailing spaces are ignored unless they are escaped with a backslash
-    i = len(pattern)-1
+    i = len(pattern) - 1
     striptrailingspaces = True
     while i > 1 and pattern[i] == ' ':
-        if pattern[i-1] == '\\':
-            pattern = pattern[:i-1] + pattern[i:]
+        if pattern[i - 1] == '\\':
+            pattern = pattern[:i - 1] + pattern[i:]
             i = i - 1
             striptrailingspaces = False
         else:
@@ -140,7 +143,7 @@ class IgnoreRule(collections.namedtuple('IgnoreRule_', IGNORE_RULE_FIELDS)):
 # Frustratingly, python's fnmatch doesn't provide the FNM_PATHNAME
 # option that .gitignore's behavior depends on.
 def fnmatch_pathname_to_regex(
-    pattern, directory_only: bool, negation: bool, anchored: bool = False
+        pattern, directory_only: bool, negation: bool, anchored: bool = False
 ):
     """
     Implements fnmatch style-behavior, as though with FNM_PATHNAME flagged;
@@ -208,6 +211,10 @@ def fnmatch_pathname_to_regex(
     return ''.join(res)
 
 
+def to_unix_style(path):
+    return str(path).replace('\\', '/')
+
+
 def _normalize_path(path: Union[str, Path]) -> Path:
     """Normalize a path without resolving symlinks.
 
@@ -215,4 +222,5 @@ def _normalize_path(path: Union[str, Path]) -> Path:
     Note that this simplifies paths by removing double slashes, `..`, `.` etc. like
     `Path.resolve()` does.
     """
-    return Path(abspath(path))
+    path = Path(to_unix_style(path)).resolve(strict=False)
+    return path
