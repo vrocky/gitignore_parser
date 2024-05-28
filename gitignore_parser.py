@@ -1,4 +1,5 @@
 import collections
+import logging
 import os
 import re
 
@@ -117,20 +118,22 @@ IGNORE_RULE_FIELDS = [
 
 
 class IgnoreRule(collections.namedtuple('IgnoreRule_', IGNORE_RULE_FIELDS)):
-    def __str__(self):
-        return self.pattern
-
-    def __repr__(self):
-        return ''.join(['IgnoreRule(\'', self.pattern, '\')'])
-
     def match(self, abs_path: Union[str, Path]):
         matched = False
         if self.base_path:
-            rel_path = str(_normalize_path(abs_path).relative_to(self.base_path))
+            normalized_path = _normalize_path(abs_path)
+            # Check if the path is actually a subpath to avoid ValueError
+            if str(normalized_path).startswith(str(self.base_path)):
+                rel_path = str(normalized_path.relative_to(self.base_path))
+            else:
+                # Handle the case where it's not a subpath
+                # You might want to log this or handle it in another way
+                logging.debug(f"Path {normalized_path} is not a subpath of {self.base_path}.")
+                return False
         else:
             rel_path = str(_normalize_path(abs_path))
-        # Path() strips the trailing slash, so we need to preserve it
-        # in case of directory-only negation
+
+        # Further processing...
         if self.negation and type(abs_path) == str and abs_path[-1] == '/':
             rel_path += '/'
         if rel_path.startswith('./'):
